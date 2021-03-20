@@ -1,39 +1,67 @@
 ﻿@page "/"
 @page "/todo"
-<h3>Todo (@todos.Count(t => !t.IsDone))</h3>
+@inject HttpClient Http
+<h3>Todo (@todos?.Count(t => !t.IsDone))</h3>
 
-<ul>
-    @foreach (var todo in todos)
-    {
-        <li hidden="@(todo.IsDone && !showAll)">
-            <input type="checkbox" @bind="todo.IsDone" />
-            <input type="text" @bind="todo.Title" />
-        </li>
-    }
-</ul>
-<button @onclick="showAllItem">@(!showAll ? "Show All" : "Hide done")</button><br />
 
-<input placeholder="Something todo" @bind="newTodoTitle"/>
-<button @onclick="AddTodo">Add Todo</button>
+@if (todos == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <ul>
+        @foreach (var todo in todos)
+        {
+            <li hidden="@(todo.IsDone && !showAll)">
+                <input type="checkbox" @bind="todo.IsDone" />
+                <input type="text" @bind="todo.Title" />
+            </li>
+        }
+    </ul>
+    <button @onclick="showAllItem">@(!showAll ? "Show All" : "Hide done")</button>
+    <br />
 
+    <input placeholder="Something todo" @bind="newTodoTitle" />
+    <button @onclick="AddTodo">Add Todo</button>
+}
 @code {
     @using Lanz.TodoList.Models
 
-        private List<TodoItemModel> todos = new List<TodoItemModel>();
-        private string newTodoTitle;
-        private bool showAll { get; set; } = false;
+    private List<TodoItemModel> todos = null;
+    private string newTodoTitle;
+    private bool showAll { get; set; } = false;
 
-        private void AddTodo()
+    protected async override Task OnInitializedAsync()
+    {
+        todos = await Http.GetFromJsonAsync<List<TodoItemModel>>("/api/todoitem/");
+    }
+
+    private async void AddTodo()
+    {
+        if (!string.IsNullOrWhiteSpace(newTodoTitle))
         {
-            if (!string.IsNullOrWhiteSpace(newTodoTitle))
+            var todoItem = new TodoItemModel() { Title = newTodoTitle };
+            var response = await Http.PostAsJsonAsync<TodoItemModel>("/api/todoitem/", todoItem);
+
+            var todoResponse = await response.Content.ReadFromJsonAsync<TodoItemModel>();
+
+            if(todoResponse != null)
             {
-                todos.Add(new TodoItemModel() { Title = newTodoTitle });
-                newTodoTitle = string.Empty;
+                todos.Add(todoResponse);
             }
-        }
 
-        private void showAllItem()
-        {
-            showAll = !showAll;
+            newTodoTitle = string.Empty;
+
+            await InvokeAsync(() =>
+            {
+                StateHasChanged();
+            });
         }
     }
+
+    private void showAllItem()
+    {
+        showAll = !showAll;
+    }
+}
