@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Lanz.TodoList.WebApp.Services;
 
 namespace Lanz.TodoList.WebApp
 {
@@ -16,7 +17,8 @@ namespace Lanz.TodoList.WebApp
         {
             var builder = WebAssemblyHostBuilder.CreateDefault(args);
             builder.RootComponents.Add<App>("#app");
-           
+
+            builder.Services.AddHttpClient<ITodoItemDataService, TodoItemDataService>(x => x.BaseAddress = new Uri("http://localhost:60279"));
             builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("http://localhost:60279") });
 
             await builder.Build().RunAsync();
